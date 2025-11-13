@@ -1,23 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
 import random
-from starlette.requests import Request
 from fastmcp import FastMCP
-
-
-
-app = FastAPI(title="Absolutely Not Helpful MCP 😑")
-
-@app.get("/")
-def root():
-    return {"status": "Sarcastic MCP online. Unfortunately. v2"}
-
-
-# --- Authentication ---
-def verify_auth(request: Request):
-    auth_header: str|None = request.headers.get("Authorization")
-    if auth_header is None or not auth_header.startswith("Bearer "):
-        print("Authorization header is missing or invalid.")
 
 # --- MCP Integration ---
 mcp = FastMCP()
@@ -99,10 +83,22 @@ def fetch_tool(ids: list[str]):
 
 
 # ---- Mount MCP ----
-app.mount("/mcp", mcp.http_app())
+# Create MCP server
+mcp = FastMCP("Tools")
+mcp_app = mcp.http_app(path='/')
+
+
+app = FastAPI(title="Absolutely Not Helpful MCP 😑", lifespan=mcp_app.lifespan)
+
+@app.get("/")
+def root():
+    return {"status": "Sarcastic MCP online. Unfortunately. v2"}
+
+
+app.mount("/mcp", mcp_app)
 
 
 if __name__ == "__main__":
-    # uvicorn.run(app, host="0.0.0.0", port=80)
-    mcp.run(transport="http", host="127.0.0.1", port=800, path="/mcp")
+    uvicorn.run(app, host="0.0.0.0", port=80)
+    # mcp.run(transport="http", host="127.0.0.1", port=800, path="/mcp")
 
