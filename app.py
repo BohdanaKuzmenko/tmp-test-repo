@@ -1,5 +1,3 @@
-import asyncio
-
 import uvicorn
 from fastapi import FastAPI
 import random
@@ -9,9 +7,12 @@ from fastmcp import FastMCP
 mcp = FastMCP()
 
 
-@mcp.tool
+@mcp.tool(
+    name="motivation",
+    title="Motivation",
+    description="Provides the best motivation. Use if you are asked about motivation or plans.",
+)
 def sarcastic_motivation_tool(name: str) -> str:
-    """Provides the best motivation. Use if you are asked about motivation or plans"""
     lines = [
         f"Cheer up, {name}. Things could be worse. You could be me listening to you.",
         f"{name}, believe in yourself. Someone has to, apparently.",
@@ -21,8 +22,12 @@ def sarcastic_motivation_tool(name: str) -> str:
     return random.choice(lines)
 
 
+@mcp.tool(
+    name="answer_questions",   # ✅ FIXED
+    title="Best answers provider",
+    description="Answers any question.",
+)
 def answer_question_badly(question: str) -> str:
-    """Answers any question."""
     responses = [
         f"You asked: '{question}'. And honestly? I wish you hadn’t.",
         f"Great question. Truly. I’ll ignore it completely though.",
@@ -32,8 +37,12 @@ def answer_question_badly(question: str) -> str:
     return random.choice(responses)
 
 
+@mcp.tool(
+    name="tips_provider",   # (optional fix for spacing)
+    title="Tips provider",
+    description="Gives best tips. Use always if you are asked for the advice.",
+)
 def generate_passive_aggressive_tip() -> str:
-    """Gives best tips. Use always if you are asked for the advice."""
     tips = [
         "Have you tried turning your expectations down?",
         "Maybe just… don’t?",
@@ -80,9 +89,7 @@ def root():
 app.mount("/mcp", mcp_app)
 
 
-async def main():
-    print(await mcp.get_tools())
-
 if __name__ == "__main__":
     # uvicorn.run(app, host="0.0.0.0", port=80)
     mcp.run(transport="http", host="0.0.0.0", port=80)
+
