@@ -1,8 +1,10 @@
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from pydantic import BaseModel
 from typing import Any, Dict
 import random
+from fastapi_mcp import FastApiMCP, AuthConfig
+from starlette.requests import Request
 
 app = FastAPI(title="Absolutely Not Helpful MCP 😑")
 
@@ -127,6 +129,34 @@ def mcp_tools_run(req: MCPToolRunRequest):
 @app.get("/")
 def root():
     return {"status": "Sarcastic MCP online. Unfortunately."}
+
+
+# --- Authentication ---
+def verify_auth(request: Request):
+    """Dependency to verify the internal bearer token."""
+    auth_header: str|None = request.headers.get("Authorization")
+    if auth_header is None or not auth_header.startswith("Bearer "):
+        print("Authorization header is missing or invalid.")
+
+# --- MCP Integration ---
+mcp = FastApiMCP(
+    app,
+    name="Apxml API Services",
+    description="Tools for managing orders and customers.",
+    describe_all_responses=True,
+    describe_full_response_schema=True,
+    # Only expose the endpoints with these operation_ids
+    include_operations=[
+        "get_order_details",
+        "get_customer_profile",
+    ],
+    auth_config=AuthConfig(
+        dependencies=[Depends(verify_auth)],
+    ),
+)
+# Mount the MCP server on a specific path
+mcp.mount_http(mount_path="/mcp")
+mcp.setup_server()
 
 
 if __name__ == "__main__":
