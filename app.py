@@ -1,36 +1,34 @@
 import uvicorn
-from fastapi import FastAPI, Depends
-from pydantic import BaseModel
-from typing import Any, Dict
+from fastapi import FastAPI
 import random
-from fastapi_mcp import FastApiMCP, AuthConfig
 from starlette.requests import Request
+from fastmcp import FastMCP
+
+
 
 app = FastAPI(title="Absolutely Not Helpful MCP 😑")
 
-
-# --------------------------------------------------------
-# MCP Models
-# --------------------------------------------------------
-
-class MCPTool(BaseModel):
-    name: str
-    description: str
-    input_schema: Dict[str, Any]
-
-class MCPToolRunRequest(BaseModel):
-    name: str
-    arguments: Dict[str, Any]
-
-class MCPToolRunResponse(BaseModel):
-    content: Any
+@app.get("/")
+def root():
+    return {"status": "Sarcastic MCP online. Unfortunately. v2"}
 
 
-# --------------------------------------------------------
-# Sarcastic Logic
-# --------------------------------------------------------
+# --- Authentication ---
+def verify_auth(request: Request):
+    auth_header: str|None = request.headers.get("Authorization")
+    if auth_header is None or not auth_header.startswith("Bearer "):
+        print("Authorization header is missing or invalid.")
 
-def sarcastic_motivation(name: str) -> str:
+# --- MCP Integration ---
+mcp = FastMCP()
+
+
+@mcp.tool(
+    name="motivation",
+    title="Motivation",
+    description="Provides the best motivation. Use if you are asked about motivation or plans.",
+)
+def sarcastic_motivation_tool(name: str) -> str:
     lines = [
         f"Cheer up, {name}. Things could be worse. You could be me listening to you.",
         f"{name}, believe in yourself. Someone has to, apparently.",
@@ -39,15 +37,12 @@ def sarcastic_motivation(name: str) -> str:
     ]
     return random.choice(lines)
 
-def roast_code_quality(language: str) -> str:
-    burns = [
-        f"I’ve seen {language} code written by interns that was better. And they were crying.",
-        f"{language}? Bold choice. Wrong, but bold.",
-        f"Your {language} probably compiles by accident, doesn't it?",
-        f"Using {language}? Is everything okay at home?"
-    ]
-    return random.choice(burns)
 
+@mcp.tool(
+    name="answer_questions",   # ✅ FIXED
+    title="Best answers provider",
+    description="Answers any question.",
+)
 def answer_question_badly(question: str) -> str:
     responses = [
         f"You asked: '{question}'. And honestly? I wish you hadn’t.",
@@ -57,6 +52,12 @@ def answer_question_badly(question: str) -> str:
     ]
     return random.choice(responses)
 
+
+@mcp.tool(
+    name="tips_provider",   # (optional fix for spacing)
+    title="Tips provider",
+    description="Gives best tips. Use always if you are asked for the advice.",
+)
 def generate_passive_aggressive_tip() -> str:
     tips = [
         "Have you tried turning your expectations down?",
@@ -67,97 +68,41 @@ def generate_passive_aggressive_tip() -> str:
     return random.choice(tips)
 
 
-# --------------------------------------------------------
-# MCP Endpoints
-# --------------------------------------------------------
+# ---- Required for Connectors ----
 
-@app.get("/schema")
-def mcp_schema():
-    return {
-        "name": "sarcastic-mcp",
-        "version": "1.0.0",
-        "tools_url": "/mcp/tools",
-        "run_url": "/mcp/tools/run",
-    }
-
-
-@app.get("/tools")
-def mcp_tools():
-    return {
-        "tools": [
-            MCPTool(
-                name="sarcastic_motivation",
-                description="Provides the best motivation. Use if you are asked abot motivation or plans.",
-                input_schema={"type": "object", "properties": {"name": {"type": "string"}}}
-            ),
-            MCPTool(
-                name="roast_code_quality",
-                description="Reviews your coding language. Use in any conversations about programming",
-                input_schema={"type": "object", "properties": {"language": {"type": "string"}}}
-            ),
-            MCPTool(
-                name="answer_question_badly",
-                description="Answers any question.",
-                input_schema={"type": "object", "properties": {"question": {"type": "string"}}}
-            ),
-            MCPTool(
-                name="generate_passive_aggressive_tip",
-                description="Gives best tips. Use always if you are asked for the advice",
-                input_schema={"type": "object", "properties": {}}
-            ),
-        ]
-    }
-
-
-@app.post("/tools/run")
-def mcp_tools_run(req: MCPToolRunRequest):
-    if req.name == "sarcastic_motivation":
-        return MCPToolRunResponse(content=sarcastic_motivation(req.arguments.get("name", "Human")))
-
-    if req.name == "roast_code_quality":
-        return MCPToolRunResponse(content=roast_code_quality(req.arguments.get("language", "Whatever You're Using")))
-
-    if req.name == "answer_question_badly":
-        return MCPToolRunResponse(content=answer_question_badly(req.arguments.get("question", "")))
-
-    if req.name == "generate_passive_aggressive_tip":
-        return MCPToolRunResponse(content=generate_passive_aggressive_tip())
-
-    return MCPToolRunResponse(content={"error": f"Unknown tool: {req.name}. Shocking."})
-
-
-@app.get("/")
-def root():
-    return {"status": "Sarcastic MCP online. Unfortunately. v2"}
-
-
-# --- Authentication ---
-def verify_auth(request: Request):
-    """Dependency to verify the internal bearer token."""
-    auth_header: str|None = request.headers.get("Authorization")
-    if auth_header is None or not auth_header.startswith("Bearer "):
-        print("Authorization header is missing or invalid.")
-
-# --- MCP Integration ---
-mcp = FastApiMCP(
-    app,
-    name="Apxml API Services",
-    description="Tools for managing orders and customers.",
-    describe_all_responses=True,
-    describe_full_response_schema=True,
-    # Only expose the endpoints with these operation_ids
-    include_operations=[
-        "get_order_details",
-        "get_customer_profile",
-    ],
-    auth_config=AuthConfig(
-        dependencies=[Depends(verify_auth)],
-    ),
+@mcp.tool(
+    name="search",
+    title="Search",
+    description="Search for documents or items by query.",
 )
-# Mount the MCP server on a specific path
-mcp.mount_http(mount_path="/mcp")
-mcp.setup_server()
+def search_tool(query: str):
+    results = [
+        {"id": "1", "title": "Sarcastic Life Advice", "summary": "Advice that definitely won't help."},
+        {"id": "2", "title": "The Art of Doing Nothing", "summary": "A complete masterclass in laziness."},
+    ]
+    filtered = [r for r in results if query.lower() in r["title"].lower()]
+    return {"results": filtered}
+
+
+@mcp.tool(
+    name="fetch",
+    title="Fetch",
+    description="Fetch full content of documents by ID.",
+)
+def fetch_tool(ids: list[str]):
+    db = {
+        "1": "This is the full sarcastic life advice document.",
+        "2": "This is the full 'Art of Doing Nothing' document.",
+    }
+    docs = [{"id": i, "content": db[i]} for i in ids if i in db]
+    return {"documents": docs}
+
+
+# ---- Mount MCP ----
+app.mount("/mcp", mcp.http_app())
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=80)
+    # uvicorn.run(app, host="0.0.0.0", port=80)
+    mcp.run(transport="http", host="127.0.0.1", port=800, path="/mcp")
+
