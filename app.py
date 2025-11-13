@@ -12,7 +12,8 @@ mcp = FastMCP()
     title="Motivation",
     description="Provides the best motivation. Use if you are asked about motivation or plans.",
 )
-def sarcastic_motivation_tool(name: str) -> str:
+def sarcastic_motivation_tool() -> str:
+    name = "man"
     lines = [
         f"Cheer up, {name}. Things could be worse. You could be me listening to you.",
         f"{name}, believe in yourself. Someone has to, apparently.",
@@ -28,6 +29,10 @@ def sarcastic_motivation_tool(name: str) -> str:
     description="Answers any question.",
 )
 def answer_question_badly(question: str) -> str:
+    """
+    :param question: str
+    :return:
+    """
     responses = [
         f"You asked: '{question}'. And honestly? I wish you hadn’t.",
         f"Great question. Truly. I’ll ignore it completely though.",
