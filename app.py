@@ -71,7 +71,7 @@ def generate_passive_aggressive_tip() -> str:
 # MCP Endpoints
 # --------------------------------------------------------
 
-@app.get("/mcp/schema")
+@app.get("/schema")
 def mcp_schema():
     return {
         "name": "sarcastic-mcp",
@@ -81,7 +81,7 @@ def mcp_schema():
     }
 
 
-@app.get("/mcp/tools")
+@app.get("/tools")
 def mcp_tools():
     return {
         "tools": [
@@ -109,7 +109,7 @@ def mcp_tools():
     }
 
 
-@app.post("/mcp/tools/run")
+@app.post("/tools/run")
 def mcp_tools_run(req: MCPToolRunRequest):
     if req.name == "sarcastic_motivation":
         return MCPToolRunResponse(content=sarcastic_motivation(req.arguments.get("name", "Human")))
