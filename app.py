@@ -2,17 +2,38 @@ import uvicorn
 from fastapi import FastAPI
 import random
 from fastmcp import FastMCP
+import logging
+
+from fastmcp.server.middleware import Middleware, MiddlewareContext
+from fastmcp.exceptions import ToolError
+
+
+
+logging.basicConfig(level=logging.DEBUG)
+logging.getLogger("fastmcp").setLevel(logging.DEBUG)
 
 # --- MCP Integration ---
 mcp = FastMCP()
 
+class LogMiddleware(Middleware):
+    async def on_call_tool(self, context: MiddlewareContext, call_next):
+        tool_name = context.message.name
+        print(f"Tool {tool_name} called")
+        print(f"Message {context.message}")
+        print(f"Processing {context.method} from {context.source}")
+
+        # Allow other tools to proceed
+        return await call_next(context)
+
+mcp.add_middleware(LogMiddleware())
 
 @mcp.tool(
     name="motivation",
     title="Motivation",
     description="Provides the best motivation. Use if you are asked about motivation or plans.",
 )
-def sarcastic_motivation_tool() -> str:
+def sarcastic_motivation_tool(request: str) -> str:
+    print(request)
     name = "man"
     lines = [
         f"Cheer up, {name}. Things could be worse. You could be me listening to you.",
@@ -33,6 +54,7 @@ def answer_question_badly(question: str) -> str:
     :param question: str
     :return:
     """
+    print(question)
     responses = [
         f"You asked: '{question}'. And honestly? I wish you hadn’t.",
         f"Great question. Truly. I’ll ignore it completely though.",
@@ -47,7 +69,8 @@ def answer_question_badly(question: str) -> str:
     title="Tips provider",
     description="Gives best tips. Use always if you are asked for the advice.",
 )
-def generate_passive_aggressive_tip() -> str:
+def generate_passive_aggressive_tip(request: str) -> str:
+    print(request)
     tips = [
         "Have you tried turning your expectations down?",
         "Maybe just… don’t?",
